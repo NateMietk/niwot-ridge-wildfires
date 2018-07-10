@@ -6,6 +6,7 @@ library(purrr)
 library(sf)
 library(raster)
 library(rgdal)
+library(rasterVis)
 
 p4string_ea <- "+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"   #http://spatialreference.org/ref/sr-org/6903/
 
@@ -14,12 +15,13 @@ raw_prefix <- file.path(prefix, "raw")
 us_prefix <- file.path(raw_prefix, "cb_2016_us_state_20m")
 site_prefix <- file.path(raw_prefix, "neon_site")
 mtbs_prefix <- file.path(raw_prefix, "mtbs_fod_perimeter_data")
+forest_prefix <- file.path(raw_prefix, "conus_forestgroup")
 fire <- file.path(prefix, 'fire')
 buffered_mtbs <- file.path(fire, 'buffered_mtbs')
 
 # Check if directory exists for all variable aggregate outputs, if not then create
 var_dir <- list(prefix, raw_prefix, us_prefix, site_prefix, mtbs_prefix,
-                fire, buffered_mtbs)
+                fire, buffered_mtbs, forest_prefix)
 
 lapply(var_dir, function(x) if(!dir.exists(x)) dir.create(x, showWarnings = FALSE))
 
@@ -50,4 +52,16 @@ if (!file.exists(mtbs_shp)) {
   system(paste0("aws s3 sync ",
                 raw_prefix, " ",
                 s3_raw_prefix))
+}
+
+#Download US forest groups
+
+forest_img <- file.path(forest_prefix, "conus_forestgroup.img")
+if (!file.exists(forest_img)) {
+  loc <- "https://data.fs.usda.gov/geodata/rastergateway/forest_type/conus_forestgroup.zip"
+  dest <- paste0(prefix, ".zip")
+  download.file(loc, dest)
+  unzip(dest, exdir = forest_prefix)
+  unlink(dest)
+  assert_that(file.exists(forest_img))
 }
