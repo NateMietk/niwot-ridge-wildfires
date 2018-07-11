@@ -11,6 +11,7 @@ library(rasterVis)
 p4string_ea <- "+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"   #http://spatialreference.org/ref/sr-org/6903/
 
 prefix <- file.path("data")
+forests_dir <- file.path(prefix, 'forests')
 raw_prefix <- file.path(prefix, "raw")
 us_prefix <- file.path(raw_prefix, "cb_2016_us_state_20m")
 site_prefix <- file.path(raw_prefix, "neon_site")
@@ -21,7 +22,7 @@ buffered_mtbs <- file.path(fire, 'buffered_mtbs')
 
 # Check if directory exists for all variable aggregate outputs, if not then create
 var_dir <- list(prefix, raw_prefix, us_prefix, site_prefix, mtbs_prefix,
-                fire, buffered_mtbs, forest_prefix)
+                fire, buffered_mtbs, forest_prefix, forests_dir)
 
 lapply(var_dir, function(x) if(!dir.exists(x)) dir.create(x, showWarnings = FALSE))
 
