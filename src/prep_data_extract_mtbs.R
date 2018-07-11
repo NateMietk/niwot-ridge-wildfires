@@ -2,7 +2,9 @@
 if (!exists("usa_shp")){
   usa <- st_read(file.path(us_prefix), layer = "cb_2016_us_state_20m") %>%
     sf::st_transform(p4string_ea) %>%
-    dplyr::filter(!STUSPS %in% c("HI", "AK", "PR"))
+    dplyr::filter(!STUSPS %in% c("HI", "AK", "PR")) %>%
+    mutate(regions = as.factor(if_else(!(STUSPS %in% c("FL", "GA", "AL", "MS", "LA", "AR", "TN", "NC", "SC", "TX", "OK", "ME", "NH", "VT", "NY", "PA", "DE", "NJ", "RI", "CT",
+                                                       "MI", "MD", "MA", "WI", "IL", "IN", "OH", "WV", "VA", "KY", "MO", "IA", "MN")), "West", 'Central/East')))
   usa$STUSPS <- droplevels(usa$STUSPS)
 }
 
@@ -16,7 +18,31 @@ if (!exists("niwot")){
 
 if (!exists("mtbs")) {
   mtbs <- st_read(file.path(mtbs_prefix, 'mtbs_perimeter_data_v2'), layer = 'dissolve_mtbs_perims_1984-2015_DD_20170501') %>%
-    sf::st_transform(p4string_ea) 
+    sf::st_transform(p4string_ea) %>%
+    st_join(., usa, join = st_intersects)
+  
+  mtbs_fitted_mblm <- as.data.frame(mtbs) %>%
+    filter(regions == 'West') %>%
+    group_by(Year) %>%
+    summarise(mean_fire_size = mean(Acres)) %>%
+    mblm(mean_fire_size ~ Year, data = ., repeated = FALSE)
+  pct_increase <- (max(mtbs_fitted_mblm$fitted.values)/min(mtbs_fitted_mblm$fitted.values))*100
+  
+  p1 <- as.data.frame(mtbs) %>%
+    filter(regions == 'West') %>%
+    group_by(Year) %>%
+    summarise(mean_fire_size = mean(Acres)) %>%
+    ggplot(aes(x = Year, y = mean_fire_size)) +
+    geom_bar(stat= 'identity') +
+    geom_abline(intercept = coef(mtbs_fitted_mblm)[1], 
+                slope = coef(mtbs_fitted_mblm)[2], 
+                col = 'red', linetype = "dashed", size = 1.25) +
+    geom_text(aes(label=paste('% change from 1984-2015 = ', round(pct_increase[1],1), '%'), 
+                  x = 1990, y = 20000), size = 4) +
+    ylab('Mean fire size (acres)') + xlab('Year') +
+    ggtitle('Average fire size across the western US from 1984-2015') +
+    theme_pub()
+  ggsave("figures/wus_mean_fire_size.pdf", p1, width = 6, height = 5, dpi = 600, units = "cm", scale = 3)
 }
 
 ###### Buffer niwot ridge by 200k and extract MTBS polygons ###### 
@@ -28,19 +54,50 @@ usa_small <- niwot_buf_200k %>%
 
 mtbs_niwot_200k <- mtbs %>%
   st_join(niwot_buf_200k, join = st_intersects) %>%
-  na.omit(BIOSHP_RES)
-
-as.data.frame(mtbs_niwot_200k) %>%
-  mutate(decade = ifelse(Year < 1989, 1980,
-                         ifelse(Year >= 1990 & Year < 2000, 1990,
-                                ifelse(Year >= 2000 & Year < 2010, 2000, 2010)))) %>%
-  group_by(decade) %>%
-  summarise(mean_fire_size = mean(Acres)) %>%
-  ggplot(aes(x = decade, y = mean_fire_size)) +
-  geom_bar(stat= 'identity')
+  na.omit(BIOSHP_RES) %>%
+  mutate(decade = as.integer(case_when(
+    Year <= 1989 ~ 1,
+    Year >= 1990 & Year < 1995 ~ 2,
+    Year >= 1995 & Year <= 1999 ~ 3,
+    Year >= 2000 & Year < 2005 ~ 4,
+    Year >= 2005 & Year <= 2009 ~ 5,
+    Year >= 2010 & Year <= 2015 ~ 6, TRUE ~ NA_real_)),
+    decade_title = as.factor(case_when(
+      decade == 1 ~ '1984-1989',
+      decade == 2 ~ '1990-1994',
+      decade == 3 ~ '1995-1999',
+      decade == 4 ~ '2000-2004',
+      decade == 5 ~ '2005-2009',
+      decade == 6 ~ '2010-2015',
+      TRUE ~ NA_character_)))
 
 st_write(mtbs_niwot_200k, file.path(buffered_mtbs, 'mtbs_niwot_200k.shp'),
          delete_layer = TRUE)
+
+if(!file.exists('figures/niwot_mean_fire_size.pdf')){
+  mtbs_200k_fitted_mblm <- as.data.frame(mtbs_niwot_200k) %>%
+    group_by(decade) %>%
+    summarise(mean_fire_size = mean(Acres)) %>%
+    mblm(mean_fire_size ~ decade, data = ., repeated = FALSE)
+
+    pct_increase <- (max(mtbs_200k_fitted_mblm$fitted.values)/min(mtbs_200k_fitted_mblm$fitted.values))*100
+    
+    p2 <- as.data.frame(mtbs_niwot_200k)  %>%
+      group_by(decade_title) %>%
+      summarise(mean_fire_size = mean(Acres)) %>%
+      ggplot(aes(x = decade_title, y = mean_fire_size)) +
+      geom_bar(stat= 'identity') +
+      geom_abline(intercept = coef(mtbs_200k_fitted_mblm)[1], 
+                  slope = coef(mtbs_200k_fitted_mblm)[2], 
+                  col = 'red', linetype = "dashed", size = 1.25) +
+      geom_text(aes(label=paste('% change from 1984-2015 = ', round(pct_increase[1],1), '%'), 
+                    x = 1.75, y = 8500), size = 4) +
+      ylab('Mean fire size (acres)') + xlab('Year') +
+      ggtitle('Average fire size within a 200k radius from Niwot station from 1984-2015') +
+      theme_pub()
+    ggsave("figures/niwot_mean_fire_size.pdf", p2, width = 6, height = 5, dpi = 600, units = "cm", scale = 3) 
+    }
+
 
 mtbs_1980s_200k <- mtbs_niwot_200k %>%
   filter(Year < 1990)
