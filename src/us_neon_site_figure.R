@@ -10,7 +10,7 @@ if(!file.exists(file.path(forests_dir, 'us_forests.tif'))){
     projectRaster(crs = p4string_ea, res = 500) %>%
     crop(as(states, "Spatial")) %>%
     mask(as(states, "Spatial"))
-
+  
   rcl_mtrx <- matrix(c(-Inf, 1, NA,
                        1, 999, 2,
                        999, Inf, NA), ncol=3, byrow=TRUE)
@@ -18,10 +18,10 @@ if(!file.exists(file.path(forests_dir, 'us_forests.tif'))){
   us_forests <- reclassify(us_forests, rcl_mtrx)
   writeRaster(us_forests, file.path(forests_dir, 'us_forests.tif'), 
               format = 'GTiff', overwrite = TRUE)
-  } else {
-    us_forests <- readRaster(us_forests, file.path(forests_dir, 'us_forests.tif'), 
-                             format = 'GTiff')
-  }
+} else {
+  us_forests <- readRaster(us_forests, file.path(forests_dir, 'us_forests.tif'), 
+                           format = 'GTiff')
+}
 
 # Import the NEON domains and project to albers equal area
 neon_domains <- st_read(dsn = domain_prefix,
@@ -58,28 +58,31 @@ neon_nonforest_sites <- as.data.frame(neon_sites)  %>%
 neon_nonforest_sites_buffered <- neon_nonforest_sites %>%
   st_buffer(dist = 200000)
 
+mtbs_union <- mtbs %>% 
+  st_simplify(preserveTopology = TRUE, dTolerance = 10000) %>%
+  st_make_valid() %>%
+  group_by(0) %>% 
+  summarise(geog = st_union(geometry)) %>%
+  st_make_valid()
+
 # Create the map
-p <- cpal <- c( 'darkgreen')
+p <- cpal <- c( 'darkolivegreen1')
 rus_forests <- ratify(us_forests)
 levelplot(rus_forests, col.regions=cpal, att='ID', 
           margin = FALSE,                       
-          # colorkey = list(
-          #   space = 'right',                   
-          #   labels = list(c('Lodgepole', 'Spruce/fir'), font = 4),
-          #   axis.line = list(col='black')       
-          # ),    
           par.settings = list(
             axis.line = list(col = 'transparent') 
           ),
           scales = list(draw = FALSE),            
           panel=panel.levelplot.raster) +
-  layer(sp.polygons(as(neon_nonforest_sites_buffered , 'Spatial'), colour = "black", fill = 'red', alpha = 0.5)) +
-  layer(sp.polygons(as(neon_nonforest_sites , 'Spatial'), colour = "black", fill = 'black', pch = 21)) +
-  layer(sp.polygons(as(neon_forest_sites_buffered , 'Spatial'), colour = "black", fill = 'black', alpha = 0.5)) +
-  layer(sp.polygons(as(neon_forest_sites , 'Spatial'), colour = "black", fill = 'black', pch = 23)) +
-  layer(sp.polygons(as(niwot_buf_200k, 'Spatial'), colour='black', fill = 'yellow', pch = 18)) +
-  layer(sp.polygons(as(niwot_sites, 'Spatial'), colour='black', fill = 'black', pch = 18)) +
+  # layer(sp.polygons(as(neon_nonforest_sites_buffered , 'Spatial'), colour = "black", fill = 'red', alpha = 0.5)) +
+  # layer(sp.polygons(as(neon_nonforest_sites , 'Spatial'), colour = "black", fill = 'black', pch = 21)) +
+  # layer(sp.polygons(as(neon_forest_sites_buffered , 'Spatial'), colour = "black", fill = 'black', alpha = 0.5)) +
+  # layer(sp.polygons(as(neon_forest_sites , 'Spatial'), colour = "black", fill = 'black', pch = 23)) +
+  # layer(sp.polygons(as(niwot_buf_200k, 'Spatial'), colour='black', fill = 'yellow', pch = 18)) +
+  # layer(sp.polygons(as(niwot_sites, 'Spatial'), colour='black', fill = 'black', pch = 18)) +
   layer(sp.polygons(as(neon_domains, 'Spatial'), col = 'black')) +
+  layer(sp.polygons(as(mtbs_union, 'Spatial'), colour='darkred', fill = 'darkred')) +
   layer(sp.polygons(as(conus, 'Spatial'), col = 'black'))
 
 

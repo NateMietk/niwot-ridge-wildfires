@@ -19,7 +19,8 @@ if (!exists("niwot")){
 if (!exists("mtbs")) {
   mtbs <- st_read(file.path(mtbs_prefix, 'mtbs_perimeter_data_v2'), layer = 'dissolve_mtbs_perims_1984-2015_DD_20170501') %>%
     sf::st_transform(p4string_ea) %>%
-    st_join(., usa, join = st_intersects)
+    st_join(., usa, join = st_intersects) %>%
+    st_intersection(., st_union(usa))
   
   mtbs_fitted_mblm <- as.data.frame(mtbs) %>%
     filter(regions == 'West') %>%

@@ -9,6 +9,7 @@ library(rgdal)
 library(rasterVis)
 library(mblm)
 library(velox)
+library(lwgeom)
 
 source('src/functions.R')
 
