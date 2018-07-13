@@ -7,13 +7,18 @@ library(sf)
 library(raster)
 library(rgdal)
 library(rasterVis)
-library(mblm)
 library(velox)
 library(lwgeom)
-
+library(pbapply)
+library(rgeos)
+library(mblm)
+library(zoo)
+library(ncdf4)
+ 
 source('src/functions.R')
 
-p4string_ea <- "+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"
+p4string_latlong <- "+proj=longlat +datum=WGS84 +no_defs"
+p4string_ea <- '+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs'
 
 prefix <- file.path("data")
 forests_dir <- file.path(prefix, 'forests')
@@ -22,14 +27,17 @@ us_prefix <- file.path(raw_prefix, "cb_2016_us_state_20m")
 site_prefix <- file.path(raw_prefix, "neon_site")
 mtbs_prefix <- file.path(raw_prefix, "mtbs_fod_perimeter_data")
 forest_prefix <- file.path(raw_prefix, "conus_forestgroup")
+raw_baecv_dir <- file.path(raw_prefix, 'baecv')
+cd_dir <- file.path(raw_prefix, 'nm_cont_div')
 fire_dir <- file.path(prefix, 'fire')
-buffered_mtbs <- file.path(fire, 'buffered_mtbs')
+buffered_mtbs <- file.path(fire_dir, 'buffered_mtbs')
 domain_prefix <- file.path(raw_prefix, 'NEONDomains_0')
+baecv_dir <- file.path(fire_dir, 'baevc')
 
 # Check if directory exists for all variable aggregate outputs, if not then create
-var_dir <- list(prefix, raw_prefix, us_prefix, site_prefix, mtbs_prefix, forests_dir,
-                fire_dir, buffered_mtbs, forest_prefix, forests_dir, domain_prefix)
-
+var_dir <- list(prefix, raw_prefix, us_prefix, site_prefix, mtbs_prefix, forests_dir, cd_dir,
+                fire_dir, buffered_mtbs, forest_prefix, forests_dir, domain_prefix, 
+                baecv_dir, raw_baecv_dir)
 lapply(var_dir, function(x) if(!dir.exists(x)) dir.create(x, showWarnings = FALSE))
 
 # Niwot ridge site shapefile was downloaded from 'http://niwot.colorado.edu/data/geospatial'
@@ -81,4 +89,16 @@ if (!file.exists(domain_shp)) {
   unzip(dest, exdir = domain_prefix)
   unlink(dest)
   assert_that(file.exists(domain_shp))
+}
+
+#Download the continental divide
+#https://catalog.data.gov/dataset/continental-divide-trail
+cd_shp <- file.path(cd_dir, "condivl020")
+if (!file.exists(cd_shp)) {
+  loc <- "https://github.com/jalbertbowden/us-data/raw/master/shapefiles/us-continental-divide/condivl020_nt00155.tar.gz"
+  dest <- paste0(prefix, ".zip")
+  download.file(loc, dest)
+  untar(dest, exdir = cd_dir)
+  unlink(dest)
+  assert_that(file.exists(cd_shp))
 }
