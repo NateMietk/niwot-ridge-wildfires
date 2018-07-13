@@ -14,7 +14,9 @@ library(rgeos)
 library(mblm)
 library(zoo)
 library(ncdf4)
- 
+library(parallel)
+library(lubridate)
+
 source('src/functions.R')
 
 p4string_latlong <- "+proj=longlat +datum=WGS84 +no_defs"

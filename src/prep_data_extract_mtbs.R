@@ -24,10 +24,7 @@ if (!exists("niwot_buf_200k")){
     st_buffer(dist = 200000) 
   usa_small <- niwot_buf_200k %>%
     st_intersection(., usa)
-  
-  niwot_buff_rst_proj <- niwot_buf_200k %>%
-    st_transform('+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0')
-}
+  }
 
 if (!exists('cd')) {
   cd <- st_read(file.path(cd_dir), layer = "condivl020")
@@ -58,6 +55,10 @@ if (!exists('cd')) {
   cd <- cd %>%
     mutate(id = row_number(),
            regions = ifelse(id == 1, 'East', 'West'))
+  cd_ll <- cd %>%
+    st_transform('+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
+  cd_baecv_proj <- cd %>%
+    st_transform('+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0')
 }
 
 if (!exists("mtbs")) {
