@@ -56,7 +56,7 @@ if (!exists('cd')) {
     mutate(id = row_number(),
            regions = ifelse(id == 1, 'East', 'West'))
   cd_ll <- cd %>%
-    st_transform('+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
+    st_transform('+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs')
   cd_baecv_proj <- cd %>%
     st_transform('+proj=aea +lat_1=29.5 +lat_2=45.5 +lat_0=23 +lon_0=-96 +x_0=0 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0')
 }
@@ -143,7 +143,7 @@ if(!file.exists(file.path(baecv, file.path(baecv_dir, 'niwot_baecv_2015.tif'))))
                     },
                     p4string_ea = p4string_ea,
                     out_dir = baecv_dir,
-                    mask = as(niwot_buff_rst_proj, 'Spatial'),
+                    mask = as(cd_baecv_proj, 'Spatial'),
                     cl = cl)
   
   stopCluster(cl) 
