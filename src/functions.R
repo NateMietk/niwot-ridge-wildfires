@@ -5,7 +5,6 @@ anom_fun <- function(x, y) {
 mean_fun <- function(x, y) {
   (x + y)/2
 }
-
 celsius <- function(x) {
   x - 272.15
 }

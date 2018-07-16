@@ -13,6 +13,14 @@ if (!exists("niwot")){
     st_transform(st_crs(usa)) 
 }
 
+if (!exists("domains")){
+  domains <- st_read(file.path(domain_prefix), layer = "NEON_Domains") %>%
+    st_transform(st_crs(usa)) %>%
+    st_intersection(., st_union(usa)) %>%
+    filter(DomainID %in% c('12', '13', '16')) %>%
+    st_transform(p4string_latlong)
+}
+
 if (!exists("niwot_sites")){
   niwot_sites <- st_read(file.path(site_prefix), layer = "NEON_Field_Sites") %>%
     st_transform(st_crs(usa)) %>%

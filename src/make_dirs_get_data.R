@@ -35,13 +35,19 @@ fire_dir <- file.path(prefix, 'fire')
 buffered_mtbs <- file.path(fire_dir, 'buffered_mtbs')
 domain_prefix <- file.path(raw_prefix, 'NEONDomains_0')
 baecv_dir <- file.path(fire_dir, 'baevc')
-niwot_climate_dir <- file.path('data', 'climate', 'niwot')
-tmean_dir <- file.path('data', 'climate', 'tmean')
+
+tmmn_dir <- file.path('data', 'climate', 'tmmn')
+tmax_dir <- file.path('data', 'climate', 'tmmx')
+temp_mean_dir <- file.path('data', 'climate', 'tmean', 'monthly_mean')
+
+temp_anomalies_dir <- file.path('data', 'climate', 'tmean', 'monthly_anomalies')
+pdsi_mean_dir <- file.path('data', 'climate', 'pdsi', 'monthly_mean')
+pdsi_anomalies_dir <- file.path('data', 'climate', 'pdsi', 'monthly_anomalies')
 
 # Check if directory exists for all variable aggregate outputs, if not then create
 var_dir <- list(prefix, raw_prefix, us_prefix, site_prefix, mtbs_prefix, forests_dir, cd_dir,
                 fire_dir, buffered_mtbs, forest_prefix, forests_dir, domain_prefix, 
-                baecv_dir, raw_baecv_dir, niwot_climate_dir, tmean_dir)
+                baecv_dir, raw_baecv_dir, niwot_climate_dir, tmean_dir, pdsi_mean_dir, pdsi_anomalies_dir)
 lapply(var_dir, function(x) if(!dir.exists(x)) dir.create(x, showWarnings = FALSE))
 
 # Niwot ridge site shapefile was downloaded from 'http://niwot.colorado.edu/data/geospatial'
