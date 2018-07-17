@@ -14,11 +14,17 @@ if (!exists("niwot")){
 }
 
 if (!exists("domains")){
-  domains <- st_read(file.path(domain_prefix), layer = "NEON_Domains") %>%
+  domains_ll <- st_read(file.path(domain_prefix), layer = "NEON_Domains") %>%
     st_transform(st_crs(usa)) %>%
     st_intersection(., st_union(usa)) %>%
     filter(DomainID %in% c('12', '13', '16')) %>%
-    st_transform(p4string_latlong)
+    st_transform(p4string_latlong) %>%
+    st_cast('POLYGON')
+  
+  domains <- st_read(file.path(domain_prefix), layer = "NEON_Domains") %>%
+    st_transform(st_crs(usa)) %>%
+    st_intersection(., st_union(usa)) %>%
+    filter(DomainID %in% c('12', '13', '16')) 
 }
 
 if (!exists("niwot_sites")){
@@ -96,6 +102,92 @@ if (!exists("mtbs")) {
     ylab('Mean fire size (acres)') + xlab('Year') +
     ggtitle('Average fire size across the western US from 1984-2015') +
     theme_pub()
+  ggsave("figures/wus_mean_fire_size.pdf", p1, width = 6, height = 5, dpi = 600, units = "cm", scale = 3)
+  
+  
+}
+
+if (!exists("mtbs_domains")) {
+  mtbs_domains <- mtbs %>%
+    st_join(., domains, join = st_intersects) %>%
+    na.omit(DomainID)
+  
+  mtbs_fitted_nr <- as.data.frame(mtbs_domains) %>%
+    filter(DomainName == 'Northern Rockies') %>%
+    group_by(Year) %>%
+    summarise(mean_fire_size = mean(Acres)) %>%
+    mblm(mean_fire_size ~ Year, data = ., repeated = FALSE)
+  pct_increase_nr <- (max(mtbs_fitted_nr$fitted.values)/min(mtbs_fitted_nr$fitted.values))*100
+  
+  mtbs_fitted_pnw <- as.data.frame(mtbs_domains) %>%
+    filter(DomainName == 'Pacific Northwest') %>%
+    group_by(Year) %>%
+    summarise(mean_fire_size = mean(Acres)) %>%
+    mblm(mean_fire_size ~ Year, data = ., repeated = FALSE)
+  pct_increase_pnw <- (max(mtbs_fitted_pnw$fitted.values)/min(mtbs_fitted_pnw$fitted.values))*100
+  
+  mtbs_fitted_sr <- as.data.frame(mtbs_domains) %>%
+    filter(DomainName == 'Southern Rockies / Colorado Plateau') %>%
+    group_by(Year) %>%
+    summarise(mean_fire_size = mean(Acres)) %>%
+    mblm(mean_fire_size ~ Year, data = ., repeated = FALSE)
+  pct_increase_sr <- (max(mtbs_fitted_sr$fitted.values)/min(mtbs_fitted_sr$fitted.values))*100
+  
+  p1 <- as.data.frame(mtbs_domains) %>%
+    filter(DomainName == 'Pacific Northwest') %>%
+    group_by(Year, DomainName) %>%
+    summarise(mean_fire_size = mean(Acres)) %>%
+    ggplot(aes(x = Year, y = mean_fire_size, fill = DomainName)) +
+    geom_bar(stat= 'identity', position = position_dodge(width = 0.9), alpha = 0.3) +
+    scale_fill_manual(values = c('#2CA02C')) +
+    geom_abline(intercept = coef(mtbs_fitted_pnw)[1], 
+                slope = coef(mtbs_fitted_pnw)[2], 
+                col = '#2CA02C', linetype = "dashed", size = 1.25) +
+    geom_text(aes(label=paste('% change = ', round(pct_increase_pnw[1],1), '%'), 
+                  x = 1986, y = 60000), size = 4, inherit.aes = FALSE) +
+    ylab('Mean fire size (acres)') + xlab('Year') +
+    ggtitle('Pacific Northwest') +
+    theme_pub() +
+    theme(legend.position = 'none')
+ 
+  p2 <-  as.data.frame(mtbs_domains) %>%
+    filter(DomainName == 'Northern Rockies') %>%
+    group_by(Year, DomainName) %>%
+    summarise(mean_fire_size = mean(Acres)) %>%
+    ggplot(aes(x = Year, y = mean_fire_size, fill = DomainName)) +
+    geom_bar(stat= 'identity', position = position_dodge(width = 0.9), alpha = 0.3) +
+    scale_fill_manual(values = c('#1F77B4')) +
+    geom_abline(intercept = coef(mtbs_fitted_nr)[1], 
+                slope = coef(mtbs_fitted_nr)[2], 
+                col = '#1F77B4', linetype = "dashed", size = 1.25) +
+    geom_text(aes(label=paste('% change = ', round(pct_increase_nr[1],1), '%'), 
+                  x = 1986, y = 60000), size = 4, inherit.aes = FALSE) +
+    ylab('Mean fire size (acres)') + xlab('Year') +
+    ggtitle('Northern Rockies') +
+    theme_pub() +
+    theme(legend.position = 'none')
+  
+  p3 <- as.data.frame(mtbs_domains) %>%
+    filter(DomainName == 'Southern Rockies / Colorado Plateau') %>%
+    group_by(Year, DomainName) %>%
+    summarise(mean_fire_size = mean(Acres)) %>%
+    ggplot(aes(x = Year, y = mean_fire_size, fill = DomainName)) +
+    geom_bar(stat= 'identity', position = position_dodge(width = 0.9), alpha = 0.3) +
+    scale_fill_manual(values = c('#D62728')) +
+    geom_abline(intercept = coef(mtbs_fitted_sr)[1], 
+                slope = coef(mtbs_fitted_sr)[2], 
+                col = '#D62728', linetype = "dashed", size = 1.25) +
+    geom_text(aes(label=paste('% change = ', round(pct_increase_sr[1],1), '%'), 
+                  x = 1986, y = 20000), size = 4, inherit.aes = FALSE) +
+    ylab('Mean fire size (acres)') + xlab('Year') +
+    ggtitle('Southern Rockies / Colorado Plateau') +
+    theme_pub() +
+    theme(legend.position = 'none')
+  
+  grid.arrange(p1, p2, p3, ncol =1)
+  
+  
+  
   ggsave("figures/wus_mean_fire_size.pdf", p1, width = 6, height = 5, dpi = 600, units = "cm", scale = 3)
   
   
