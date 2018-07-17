@@ -5,7 +5,8 @@
 conus <- st_union(usa)
 
 # Import the forest groups and project to albers equal area
-if(!file.exists(file.path(forests_dir, 'us_forests.tif'))){
+if(!exists('forests')) {
+  if(!file.exists(file.path(forests_dir, 'us_forests.tif'))){
   us_forests <- raster(file.path(forest_prefix, "conus_forestgroup.img")) %>%
     projectRaster(crs = p4string_ea, res = 500) %>%
     crop(as(states, "Spatial")) %>%
@@ -18,6 +19,7 @@ if(!file.exists(file.path(forests_dir, 'us_forests.tif'))){
   us_forests <- reclassify(us_forests, rcl_mtrx)
   writeRaster(us_forests, file.path(forests_dir, 'us_forests.tif'), 
               format = 'GTiff', overwrite = TRUE)
+  }
 } else {
   us_forests <- readRaster(us_forests, file.path(forests_dir, 'us_forests.tif'), 
                            format = 'GTiff')
@@ -48,43 +50,22 @@ neon_forest_sites <- velox(us_forests)$extract_points(sp = neon_sites) %>%
 neon_forest_sites_buffered <- neon_forest_sites %>%
   st_buffer(dist = 200000)
 
-neon_nonforest_sites <- as.data.frame(neon_sites)  %>% 
-  dplyr::select(PMC) %>%
-  anti_join(., neon_forest_sites, by = 'PMC') %>%
-  left_join(., neon_sites,  by = 'PMC') %>%
-  st_as_sf() %>%
-  filter(PMC != 'D13CT1') 
-
-neon_nonforest_sites_buffered <- neon_nonforest_sites %>%
-  st_buffer(dist = 200000)
-
-mtbs_union <- mtbs %>% 
-  st_simplify(preserveTopology = TRUE, dTolerance = 10000) %>%
-  st_make_valid() %>%
-  group_by(0) %>% 
-  summarise(geog = st_union(geometry)) %>%
-  st_make_valid()
-
 # Create the map
-p <- cpal <- c( 'darkolivegreen1')
+p <- cpal <- c( 'darkolivegreen3')
 rus_forests <- ratify(us_forests)
-levelplot(rus_forests, col.regions=cpal, att='ID', 
-          margin = FALSE,                       
-          par.settings = list(
-            axis.line = list(col = 'transparent') 
-          ),
-          scales = list(draw = FALSE),            
-          panel=panel.levelplot.raster) +
-  # layer(sp.polygons(as(neon_nonforest_sites_buffered , 'Spatial'), colour = "black", fill = 'red', alpha = 0.5)) +
-  # layer(sp.polygons(as(neon_nonforest_sites , 'Spatial'), colour = "black", fill = 'black', pch = 21)) +
-  # layer(sp.polygons(as(neon_forest_sites_buffered , 'Spatial'), colour = "black", fill = 'black', alpha = 0.5)) +
-  # layer(sp.polygons(as(neon_forest_sites , 'Spatial'), colour = "black", fill = 'black', pch = 23)) +
-  # layer(sp.polygons(as(niwot_buf_200k, 'Spatial'), colour='black', fill = 'yellow', pch = 18)) +
-  # layer(sp.polygons(as(niwot_sites, 'Spatial'), colour='black', fill = 'black', pch = 18)) +
-  layer(sp.polygons(as(neon_domains, 'Spatial'), col = 'black')) +
-  layer(sp.polygons(as(mtbs_union, 'Spatial'), colour='darkred', fill = 'darkred')) +
-  layer(sp.polygons(as(conus, 'Spatial'), col = 'black'))
 
-
-ggsave(file = "figures/us_site_map.pdf", p, width = 4, height = 3, 
-       dpi = 300, units = "cm") #saves p
+pdf("figures/us_site_map.pdf")
+print(levelplot(rus_forests, col.regions=cpal, att='ID', 
+                margin = FALSE,                       
+                par.settings = list(
+                  axis.line = list(col = 'transparent') 
+                ),
+                scales = list(draw = FALSE),            
+                panel=panel.levelplot.raster) +
+        layer(sp.polygons(as(neon_forest_sites_buffered , 'Spatial'), colour = "black", lwd=2)) +
+        layer(sp.polygons(as(neon_forest_sites , 'Spatial'), colour = "black", fill = 'black', pch = 23)) +
+        layer(sp.polygons(as(niwot_buf_200k, 'Spatial'), col = "red", lwd = 3)) +
+        layer(sp.polygons(as(niwot_sites, 'Spatial'), colour='black', fill = 'black', pch = 23)) +
+        layer(sp.polygons(as(neon_domains, 'Spatial'), col = 'black')) +
+        layer(sp.polygons(as(conus, 'Spatial'), col = 'black')))
+dev.off()

@@ -102,7 +102,7 @@ if (length(list.files(tmmn_dir, pattern = 'tif$', recursive = TRUE, full.names =
 } else {
   monthly_tmmn_list <- list.files(tmmn_dir, pattern = 'tif$', recursive = TRUE, full.names = TRUE)
   
-  tmmn_mean <- raster::stack(monthly_tmmn_files)
+  tmmn_mean <- raster::stack(monthly_tmmn_list)
   tmmn_mean <- dropLayer(tmmn_mean, 1:12)
   tmmn_mean = setZ(tmmn_mean, idx)
 }
