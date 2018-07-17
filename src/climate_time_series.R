@@ -16,7 +16,7 @@ if(!file.exists(file.path('data', 'climate', 'pdsi_summer_mean_domains.rds'))) {
              sep = "\\.") %>%
     mutate(DomainID = ifelse(ID_sp == 1, 12, 
                              ifelse(ID_sp == 2, 13, 16))) %>%
-    dplyr::select(DomainID, year, month, temp_anomalies) %>%
+    dplyr::select(DomainID, year, month, pdsi_mean) %>%
     left_join(., domains_df, by = 'DomainID') %>%
     group_by(DomainName) %>%
     arrange(DomainName) %>%
@@ -37,14 +37,11 @@ if(!file.exists(file.path('data', 'climate', 'pdsi_summer_anomalies_domains.rds'
   pdsi_anomalies_df <- pdsi_anomalies_df %>%
     gather(key = key, value = pdsi_anomalies, -ID_sp) %>%
     separate(key,
-             into = c("variable", 'year', 'anom'),
+             into = c("variable", 'anom', 'year', 'month'),
              sep = "_") %>%
-    separate(anom,
-             into = c("anom", 'month'),
-             sep = "\\.") %>%
     mutate(DomainID = ifelse(ID_sp == 1, 12, 
                              ifelse(ID_sp == 2, 13, 16))) %>%
-    dplyr::select(DomainID, year, month, temp_anomalies) %>%
+    dplyr::select(DomainID, year, month, pdsi_anomalies) %>%
     left_join(., domains_df, by = 'DomainID') %>%
     group_by(DomainName) %>%
     arrange(DomainName) %>%
@@ -72,13 +69,15 @@ if(!file.exists(file.path('data', 'climate', 'temp_summer_mean_domains.rds'))) {
              sep = "\\.") %>%
     mutate(DomainID = ifelse(ID_sp == 1, 12, 
                              ifelse(ID_sp == 2, 13, 16))) %>%
-    dplyr::select(DomainID, year, month, temp_anomalies) %>%
+    dplyr::select(DomainID, year, month, temp_mean) %>%
     left_join(., domains_df, by = 'DomainID') %>%
     group_by(DomainName) %>%
     arrange(DomainName) %>%
     mutate( med_5yr = rollapply(temp_mean, 24, mean, align='center', fill=NA)) %>%
     ungroup() %>%
-    mutate(date = as.POSIXct(paste0(year, '-', month, '-01'), format = "%Y-%m-%d")) %>%
+    mutate(date = as.POSIXct(paste0(year, '-', month, '-01'), format = "%Y-%m-%d"),
+           temp_mean = celsius(temp_mean),
+           med_5yr = celsius(med_5yr)) %>%
     filter(month %in% c(6, 7, 8))
   write_rds(temp_mean_df, file.path('data', 'climate', 'temp_summer_mean_domains.rds'))
 } else {
@@ -154,7 +153,7 @@ pdsi_mean_p <- pdsi_mean_df %>%
 
 temp_mean_p <- temp_mean_df %>%
   filter(date >= "1984-01-01" & date <= "2016-12-01") %>%
-  ggplot(aes(x = date, y = med_5yr, color = regions, group = regions)) +
+  ggplot(aes(x = date, y = med_5yr, color = DomainName, group = DomainName)) +
   #geom_point(alpha = 0.15) +
   #geom_line(size = 0.5, alpha = 0.15) +
   geom_line(aes(y = med_5yr), size = 0.5) +
