@@ -75,12 +75,12 @@ if(!file.exists(file.path('data', 'climate', 'temp_summer_mean_domains.rds'))) {
     left_join(., domains_df, by = 'DomainID') %>%
     group_by(DomainName) %>%
     arrange(DomainName) %>%
-    mutate( med_5yr = rollapply(temp_mean, 24, mean, align='center', fill=NA)) %>%
+    mutate( med_5yr = rollapply(temp_mean, 36, mean, align='center', fill=NA)) %>%
     ungroup() %>%
     mutate(date = as.POSIXct(paste0(year, '-', month, '-01'), format = "%Y-%m-%d"),
            temp_mean = celsius(temp_mean),
            med_5yr = celsius(med_5yr)) %>%
-    filter(month %in% c(6, 7, 8)) %>%
+    # filter(month %in% c(6, 7, 8)) %>%
     setNames(tolower(names(.))) %>%
     mutate(year = as.integer(year))
   write_rds(temp_mean_df, file.path('data', 'climate', 'temp_summer_mean_domains.rds'))
@@ -119,35 +119,3 @@ if(!file.exists(file.path('data', 'climate', 'temp_summer_anomalies_domains.rds'
   temp_mean_anomalies_df <- read_rds(file.path('data', 'climate', 'temp_summer_anomalies_domains.rds'))
 }
 
-if(!file.exists(file.path('data', 'climate', 'tmmn_summer_domains.rds'))) {
-  
-  tmmn_mean_df <- velox(tmmn_mean)$extract(sp = domains_ll, fun = function(x) mean(x, na.rm = TRUE), df = TRUE) %>%
-    as_tibble() 
-  colnames(tmmn_mean_df) <- c('ID_sp', names(tmmn_mean))
-  tmmn_mean_df_t <- tmmn_mean_df %>%
-    gather(key = key, value = tmmn, -ID_sp) %>%
-    separate(key,
-             into = c("variable", 'year', 'anom'),
-             sep = "_") %>%
-    separate(anom,
-             into = c("anom", 'month'),
-             sep = "\\.") %>%
-    mutate(DomainID = ifelse(ID_sp == 1, 12, 
-                             ifelse(ID_sp == 2, 13, 16))) %>%
-    dplyr::select(DomainID, year, month, tmmn) %>%
-    left_join(., domains_df, by = 'DomainID') %>%
-    group_by(DomainName) %>%
-    arrange(DomainName) %>%
-    mutate( med_5yr = rollapply(tmmn, 24, mean, align='center', fill=NA)) %>%
-    ungroup() %>%
-    mutate(date = as.POSIXct(paste0(year, '-', month, '-01'), format = "%Y-%m-%d"),
-           tmmn = celsius(tmmn),
-           med_5yr = celsius(med_5yr)) %>%    
-    filter(month %in% c(6, 7, 8)) %>%
-    setNames(tolower(names(.))) %>%
-    mutate(year = as.integer(year))
-  write_rds(tmmn_mean_df, file.path('data', 'climate', 'tmmn_summer_domains.rds'))
-  
-} else {
-  tmmn_mean_df <- read_rds(file.path('data', 'climate', 'tmmn_summer_domains.rds'))
-}
